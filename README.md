@@ -14,8 +14,6 @@ The project supports large datasets and compares CPU vs GPU performance.
 
 ---
 
-## Folder Structure
-
 ## Build Instructions (Linux)
 
 1. **Install dependencies:**

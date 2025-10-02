@@ -7,7 +7,7 @@
 #include "ICompute.h"
 
 int main() {
-    int BenchmarkIterations = 2;
+    int BenchmarkIterations = 10;
 
     const size_t N = 1ULL << 29;
     std::vector<float> dataCPU(N, 64.0f);
@@ -24,7 +24,7 @@ int main() {
 
     for (int i = 0; i < BenchmarkIterations; i++) {
         std::cout << "\nRun #" << (i+1) << std::endl;
-
+        computeGPU->renderTexture();
         auto startCPU = std::chrono::high_resolution_clock::now();
         computeCPU->process(dataCPU);
         auto endCPU = std::chrono::high_resolution_clock::now();
@@ -40,6 +40,8 @@ int main() {
 
         std::cout << "CPU time: " << cpuTime.count() << " ms\n";
         std::cout << "GPU time: " << gpuTime.count() << " ms\n";
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
 
     auto startGPU = std::chrono::high_resolution_clock::now();

@@ -15,6 +15,13 @@ std::string ComputeGPU::loadShaderSource(const char* filePath) {
     return buffer.str();
 }
 
+void ComputeGPU::createTexture(int width, int height) {
+    glGenTextures(1, &texColor);
+    glBindTexture(GL_TEXTURE_2D, texColor);
+    glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA32F, width, height);
+    glBindImageTexture(1, texColor, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+}
+
 GLuint ComputeGPU::createComputeShaderProgram(const char* shaderPath) {
     std::string src = loadShaderSource(shaderPath);
     const char* source = src.c_str();
@@ -70,6 +77,8 @@ void ComputeGPU::init(const char* shaderPath) {
     glBufferData(GL_SHADER_STORAGE_BUFFER, 0, nullptr, GL_DYNAMIC_COPY);
 
     glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 0, &max_group_size);
+
+    createTexture(texWidth, texHeight);
 
     gpu_initialized = true;
 }
@@ -134,6 +143,15 @@ void ComputeGPU::processDataGPU_NoTransfer(size_t data_count, bool wait_for_comp
     GLint groups_x_loc = glGetUniformLocation(g_program, "u_GroupsX");
     if (groups_x_loc != -1) glUniform1ui(groups_x_loc, groups_x);
 
+    uint threadsPerPixel = (data_count + texWidth * texHeight - 1) / (texWidth * texHeight);
+    glBindImageTexture(1, texColor, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+    
+    glUniform1ui(glGetUniformLocation(g_program, "texWidth"), texWidth);
+    glUniform1ui(glGetUniformLocation(g_program, "texHeight"), texHeight);
+    glUniform1ui(glGetUniformLocation(g_program, "threadsPerPixel"), threadsPerPixel);
+
+    glBindTexture(GL_TEXTURE_2D, texColor);
+    
     glDispatchCompute(groups_x, groups_y, 1);
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
@@ -154,4 +172,93 @@ void ComputeGPU::shutdown() {
     gpu_initialized = false;
     glfwTerminate();
     g_buffer_size = 0;
+}
+
+void ComputeGPU::renderTexture() {
+    if (!gpu_initialized) return;
+
+    // Make sure context is current
+    glfwMakeContextCurrent(g_window);
+
+    // Set viewport to texture size
+    glViewport(0, 0, texWidth, texHeight);
+
+    // Clear screen
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    // Simple textured quad
+    static GLuint vao = 0, vbo = 0;
+    if (vao == 0) {
+        float vertices[] = {
+            // positions  // texcoords
+            -1.0f, -1.0f, 0.0f, 0.0f,
+             1.0f, -1.0f, 1.0f, 0.0f,
+             1.0f,  1.0f, 1.0f, 1.0f,
+            -1.0f,  1.0f, 0.0f, 1.0f
+        };
+        GLuint indices[] = {0,1,2, 2,3,0};
+
+        glGenVertexArrays(1, &vao);
+        glBindVertexArray(vao);
+
+        glGenBuffers(1, &vbo);
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+        GLuint ebo;
+        glGenBuffers(1, &ebo);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+        glEnableVertexAttribArray(0); // position
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(1); // texcoord
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+    }
+
+    // Simple shader to display texture
+    static GLuint shaderProgram = 0;
+    if (shaderProgram == 0) {
+        const char* vsSource = R"(
+            #version 430
+            layout(location=0) in vec2 pos;
+            layout(location=1) in vec2 tex;
+            out vec2 vTex;
+            void main() { vTex = tex; gl_Position = vec4(pos, 0.0, 1.0); }
+        )";
+        const char* fsSource = R"(
+            #version 430
+            in vec2 vTex;
+            out vec4 FragColor;
+            uniform sampler2D tex0;
+            void main() { FragColor = texture(tex0, vTex); }
+        )";
+
+        GLuint vs = glCreateShader(GL_VERTEX_SHADER);
+        glShaderSource(vs, 1, &vsSource, nullptr);
+        glCompileShader(vs);
+
+        GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
+        glShaderSource(fs, 1, &fsSource, nullptr);
+        glCompileShader(fs);
+
+        shaderProgram = glCreateProgram();
+        glAttachShader(shaderProgram, vs);
+        glAttachShader(shaderProgram, fs);
+        glLinkProgram(shaderProgram);
+        glDeleteShader(vs);
+        glDeleteShader(fs);
+    }
+
+    glUseProgram(shaderProgram);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texColor);
+    glUniform1i(glGetUniformLocation(shaderProgram, "tex0"), 0);
+
+    glBindVertexArray(vao);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+    glfwSwapBuffers(g_window);
+    glfwPollEvents();
 }

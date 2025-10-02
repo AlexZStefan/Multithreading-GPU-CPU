@@ -20,10 +20,12 @@ public:
     void init(const char* shaderPath);
     void shutdown();
     void uploadData(const std::vector<float>& data);
+    void renderTexture();
+
 private:
     GLuint createComputeShaderProgram(const char* shaderPath);
     std::string loadShaderSource(const char* filePath);
-
+    GLuint texColor;
     GLuint g_program = 0;
     GLFWwindow* g_window = nullptr;
     GLuint sbo = 0;
@@ -31,4 +33,8 @@ private:
     size_t g_buffer_size = 0;
     bool g_data_on_gpu = false;
     bool gpu_initialized = false;
+    int texWidth = 1024;
+    int texHeight = 1024;
+
+    void createTexture(int width, int height);
 };

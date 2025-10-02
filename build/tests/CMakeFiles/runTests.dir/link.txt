@@ -1,0 +1,1 @@
+/usr/bin/c++ CMakeFiles/runTests.dir/test_compute.cpp.o -o ../runTests  ../libPS_lib.a -lpthread /usr/lib/x86_64-linux-gnu/libGL.so /usr/lib/x86_64-linux-gnu/libGLEW.so /usr/lib/x86_64-linux-gnu/libglfw.so.3.3 /usr/lib/x86_64-linux-gnu/libgtest_main.a /usr/lib/x86_64-linux-gnu/libgtest.a 

@@ -1,0 +1,2 @@
+/usr/bin/ar qc ../libPS_lib.a CMakeFiles/PS_lib.dir/cpu_compute.cpp.o CMakeFiles/PS_lib.dir/gpu_compute.cpp.o
+/usr/bin/ranlib ../libPS_lib.a

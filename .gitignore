@@ -1,12 +1,28 @@
-CMakeLists.txt.user
-CMakeCache.txt
-CMakeFiles
-CMakeScripts
-Testing
-Makefile
+# Build artifacts
+/build/
+/CMakeFiles/
+/CMakeCache.txt
 cmake_install.cmake
-install_manifest.txt
-compile_commands.json
-CTestTestfile.cmake
-_deps
-CMakeUserPresets.json
+Makefile
+*.o
+*.obj
+*.exe
+*.out
+*.so
+*.dll
+*.dylib
+
+# IDE/editor settings
+.vscode/
+*.user
+*.suo
+*.xcodeproj/
+*.xcworkspace/
+*.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Optional: compiled shaders if you ever store them as binaries
+*.spv
